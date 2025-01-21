@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-google-oauth20';
 import { Profile as G_Profile, Strategy as G_Strategy } from 'passport-github';
 import { Profile as F_Profile, Strategy as F_Strategy } from 'passport-facebook';
 import { ExtractJwt, Strategy as JWT_Strategy } from 'passport-jwt';
+import { Strategy as Local_Strategy } from 'passport-local';
+import { AuthService } from './auth.service';
 
 
 @Injectable()
@@ -19,6 +21,23 @@ export class JwtStrategy extends PassportStrategy(JWT_Strategy) {
 
   async validate(payload: any) {
     return { id: payload.sub, username: payload.username };
+  }
+}
+
+@Injectable()
+export class LocalStrategy extends PassportStrategy(Local_Strategy) {
+  constructor(private authService: AuthService) {
+    super({ usernameField: 'email' }); // Use email instead of username
+  }
+
+  async validate(email:string, password:string): Promise<any> {
+    const user = await this.authService.validateUser(email, password)
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    console.log(user);
+    
+    return user;
   }
 }
 
